@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./admin-rag-project
+      dockerfile: Dockerfile
+    container_name: flask-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./admin-rag-project/uploads:/app/uploads
+      - ./admin-rag-project/db:/app/db
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - FLASK_RUN_HOST=0.0.0.0
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: angular-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  uploads:
+    driver: local
+  db_data:
+    driver: local
