@@ -9,59 +9,16 @@ settings = Config()
 logger = logging.getLogger(__name__)
 
 class ExternalService:
-    
+
     @staticmethod
-    def forward_request(
-        url: str,
-        method: str = 'GET',
-        data: Optional[Dict] = None,
-        files: Optional[Dict] = None,
-        headers: Optional[Dict] = None,
-        return_json: bool = True,
-        timeout: int = settings.REQUEST_TIMEOUT
-    ) -> Tuple[Any, int]:
-        """
-        Generic method to forward requests to external services
-        
-        Args:
-            url: Target service URL
-            method: HTTP method (GET, POST, DELETE, etc.)
-            data: Request payload
-            files: Files to upload (for multipart requests)
-            headers: Additional headers
-            return_json: Whether to parse response as JSON
-            timeout: Request timeout in seconds
-            
-        Returns:
-            Tuple of (response_data, status_code)
-        """
-        try:
-            request_headers = settings.DEFAULT_HEADERS.copy()
-            if headers:
-                request_headers.update(headers)
-                
-            response = requests.request(
-                method=method.upper(),
-                url=url,
-                json=data if not files else None,
-                data=data if files else None,
-                files=files,
-                headers=request_headers,
-                timeout=timeout
-            )
-            
-            response.raise_for_status()
-            
-            if return_json:
-                return response.json(), response.status_code
-            return response.content, response.status_code
-            
-        except RequestException as e:
-            error_msg = f"Request to {url} failed: {str(e)}"
-            if hasattr(e, 'response') and e.response:
-                error_msg += f" - Response: {e.response.text}"
-            logger.error(error_msg)
-            return {"error": "Service error", "details": str(e)}, 500
+    def forward_request(url, method='POST', files=None, data=None):
+        import requests
+        if method == 'POST':
+            response = requests.post(url, files=files, data=data)
+            return response.json(), response.status_code
+    
+    
+    
 '''
 class DocumentService:
     @staticmethod
@@ -152,7 +109,7 @@ class ModelService:
             f"{settings.MODEL_SERVICE_URL}/models/{model_id}",
             method='DELETE'
         )
-'''  
+  
 
     @staticmethod
     def upload_files(model_name: str, files: List[Any]) -> Tuple[Dict, int]:
@@ -165,7 +122,7 @@ class ModelService:
             data={'model_name': model_name}
         )
         
-          
+'''         
     @staticmethod
     def train_model(model_id: str) -> Tuple[Dict, int]:
         """Train a specific model"""
