@@ -58,11 +58,11 @@ export class ModelCreationComponent {
               this.loadingService.setMessage('Uploading files...');
               return this.apiService.uploadModelFiles(createdModel.id, this.selectedFiles)
                 .pipe(
-                  switchMap(() => {
-                    // Initialize vector store
-                    this.loadingService.setMessage('Initializing vector store...');
-                    return this.apiService.initVectorStore();
-                  }),
+                  // switchMap(() => {
+                  //   // Initialize vector store
+                  //   this.loadingService.setMessage('Initializing vector store...');
+                  //   return this.apiService.initVectorStore();
+                  // }),
                   switchMap(() => {
                     // Start embedding process
                     this.loadingService.setMessage('Starting document embedding...');

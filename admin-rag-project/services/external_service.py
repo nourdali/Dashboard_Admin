@@ -109,13 +109,7 @@ class VectorStoreService:
             method='POST'
         )
 
-    @staticmethod
-    def get_vector_store(model_id: str) -> Tuple[Dict, int]:
-        """Get or create a vector store for a specific model"""
-        return ExternalService.forward_request(
-            f"{settings.MODEL_SERVICE_URL}/get-vector-store/{model_id}",
-            method='GET'
-        )
+  
 
 class ModelService:
     
@@ -152,10 +146,10 @@ class ModelService:
             f"{settings.MODEL_SERVICE_URL}/models/{model_id}",
             method='DELETE'
         )
-'''  
+
 
     @staticmethod
-    def upload_files(model_name: str, files: List[Any]) -> Tuple[Dict, int]:
+    def upload_file(model_name: str, files: List[Any]) -> Tuple[Dict, int]:
         """Upload files for a specific model"""
         files_dict = {f'files[]': (f.filename, f.stream, f.content_type) for f in files}
         return ExternalService.forward_request(
@@ -164,7 +158,7 @@ class ModelService:
             files=files_dict,
             data={'model_name': model_name}
         )
-        
+'''          
           
     @staticmethod
     def train_model(model_id: str) -> Tuple[Dict, int]:

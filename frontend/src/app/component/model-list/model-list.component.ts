@@ -95,19 +95,11 @@ export class ModelListComponent implements OnInit, OnDestroy {
       const result = await this.apiService.getModels(this.currentPage, this.pageSize).toPromise();
       if (result?.models) {
         // Get embedding status and vector store info for each model
-        const modelUpdates = result.models.map(model => 
-          forkJoin([
-            this.apiService.getEmbeddingStatus(model.id),
-            this.apiService.getVectorStore(model.id)
-          ]).pipe(
-            map(([embeddingStatus, vectorStore]) => ({
-              ...model,
-              embeddingStatus: embeddingStatus.status,
-              embeddingProgress: embeddingStatus.progress,
-              vectorStore
-            }))
-          )
-        );
+        const modelUpdates = result.models
+          .filter(model => model.embeddingStatus !== 'Completed')
+          .map(model => {
+            return this.apiService.getModel(model.id)
+          });
 
         forkJoin(modelUpdates).subscribe({
           next: (updatedModels) => {
