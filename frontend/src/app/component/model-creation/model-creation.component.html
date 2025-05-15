@@ -1,0 +1,103 @@
+<div class="container mt-4">
+  <div class="card position-relative">
+    <!-- Loading Spinner -->
+    <app-spinner></app-spinner>
+
+    <div class="card-header">
+      <h2>Create New AI Model</h2>
+    </div>
+    <div class="card-body">
+      <form (ngSubmit)="createModel()" #modelForm="ngForm">
+        <!-- Model Name -->
+        <div class="mb-3">
+          <label for="modelName" class="form-label">Model Name *</label>
+          <input
+            type="text"
+            class="form-control"
+            id="modelName"
+            name="name"
+            [(ngModel)]="model.name"
+            required
+            #name="ngModel"
+            [class.is-invalid]="name.invalid && (name.dirty || name.touched)">
+          <div class="invalid-feedback" *ngIf="name.invalid && (name.dirty || name.touched)">
+            Model name is required
+          </div>
+        </div>
+
+        <!-- Model Description -->
+        <div class="mb-3">
+          <label for="modelDescription" class="form-label">Description *</label>
+          <textarea
+            class="form-control"
+            id="modelDescription"
+            rows="3"
+            name="description"
+            [(ngModel)]="model.description"
+            required
+            #description="ngModel"
+            [class.is-invalid]="description.invalid && (description.dirty || description.touched)"></textarea>
+          <div class="invalid-feedback" *ngIf="description.invalid && (description.dirty || description.touched)">
+            Description is required
+          </div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="mb-3">
+          <label for="fileUpload" class="form-label">Upload Training Files (PDF only) *</label>
+          <div class="custom-file">
+            <input
+              type="file"
+              class="form-control"
+              id="fileUpload"
+              accept=".pdf"
+              multiple
+              (change)="onFileSelect($event)"
+              [class.is-invalid]="selectedFiles.length === 0 && modelForm.submitted">
+            <div class="invalid-feedback">
+              Please select at least one PDF file
+            </div>
+          </div>
+          <div class="selected-files mt-2" *ngIf="selectedFiles.length > 0">
+            <p>Selected files ({{selectedFiles.length}}):</p>
+            <ul class="list-group">
+              <li class="list-group-item" *ngFor="let file of selectedFiles">
+                {{file.name}}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="mb-3" *ngIf="uploadProgress > 0">
+          <div class="progress">
+            <div
+              class="progress-bar"
+              role="progressbar"
+              [style.width.%]="uploadProgress"
+              [attr.aria-valuenow]="uploadProgress"
+              aria-valuemin="0"
+              aria-valuemax="100">
+              {{uploadProgress}}%
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div class="alert alert-danger" *ngIf="error">
+          {{error}}
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" routerLink="/models">
+            <i class="bi bi-arrow-left"></i> Back to Models
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2"></i> Create Model
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

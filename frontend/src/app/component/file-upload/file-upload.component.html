@@ -1,0 +1,24 @@
+<div class="upload-container">
+    <h2>Upload de documents</h2>
+    
+    <div class="form-group">
+      <label for="category">Catégorie:</label>
+      <select id="category" [(ngModel)]="selectedCategory">
+        <option *ngFor="let cat of categories" [value]="cat">{{cat}}</option>
+      </select>
+    </div>
+    
+    <div class="file-upload">
+      <input type="file" id="fileInput" (change)="onFileSelected($event)" accept=".pdf">
+      <label for="fileInput" class="upload-button">
+        {{ selectedFile ? selectedFile.name : 'Choisir un fichier PDF' }}
+      </label>
+    </div>
+    
+    <button (click)="uploadFile()" [disabled]="!selectedFile || isLoading" class="upload-submit">
+      <span *ngIf="!isLoading">Upload</span>
+      <span *ngIf="isLoading">En cours...</span>
+    </button>
+    
+    <div *ngIf="error" class="error-message">{{error}}</div>
+  </div>

@@ -1,0 +1,220 @@
+/* Styles de base */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+  }
+  
+  .app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 20px;
+    
+    h1 {
+      margin: 0;
+    }
+    
+    nav {
+      margin-top: 15px;
+      
+      button {
+        background-color: #34495e;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        margin-right: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        
+        &:hover {
+          background-color: #3d566e;
+        }
+        
+        &.active {
+          background-color: #1abc9c;
+        }
+      }
+    }
+  }
+  
+  /* Styles communs */
+  .loading, .loading-message {
+    color: #666;
+    font-style: italic;
+  }
+  
+  .error-message {
+    color: #e74c3c;
+    background-color: #fadbd8;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+  }
+  
+  /* Dashboard Layout */
+  .dashboard-container {
+    display: flex;
+    min-height: 100vh;
+  }
+  
+  /* Sidebar Styles */
+  .sidebar {
+    width: 250px;
+    background-color: var(--primary-color);
+    color: white;
+    transition: all 0.3s ease;
+    
+    &.collapsed {
+      width: 70px;
+      
+      .sidebar-header h3 {
+        display: none;
+      }
+      
+      .nav-link span {
+        display: none;
+      }
+    }
+    
+    .sidebar-header {
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      
+      h3 {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+    }
+    
+    .sidebar-toggle {
+      color: white;
+      padding: 0;
+      
+      &:hover {
+        color: var(--accent-color);
+      }
+    }
+    
+    .nav-item {
+      .nav-link {
+        color: rgba(255, 255, 255, 0.8);
+        padding: 0.8rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        &:hover {
+          color: white;
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        &.active {
+          color: white;
+          background-color: var(--accent-color);
+        }
+        
+        i {
+          font-size: 1.2rem;
+        }
+      }
+    }
+  }
+  
+  /* Main Content Area */
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #f5f5f5;
+    
+    .navbar {
+      padding: 0.5rem 1rem;
+      background-color: white !important;
+      border-bottom: 1px solid #ddd;
+      
+      .navbar-nav {
+        .nav-link {
+          color: var(--primary-color);
+          
+          &:hover {
+            color: var(--accent-color);
+          }
+        }
+      }
+    }
+  }
+  
+  /* Content Wrapper */
+  .content-wrapper {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .dashboard-container {
+      position: relative;
+    }
+    
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      z-index: 1000;
+      transform: translateX(-100%);
+      
+      &:not(.collapsed) {
+        transform: translateX(0);
+      }
+      
+      &.collapsed {
+        transform: translateX(-100%);
+      }
+    }
+    
+    .main-content {
+      margin-left: 0;
+    }
+  }
+  
+  /* Dropdown Menu Styles */
+  .dropdown-menu {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    
+    .dropdown-item {
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      &:hover {
+        background-color: #f8f9fa;
+        color: var(--accent-color);
+      }
+      
+      i {
+        font-size: 1.1rem;
+      }
+    }
+  }
+  
+  /* Styles spécifiques aux composants */
+  @import '../app/component/file-upload/file-upload.component.scss';
+  @import '../app/component/document-list/document-list.component.scss';
+  @import '../app/component/chat/chat.component.scss';

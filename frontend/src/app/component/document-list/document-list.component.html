@@ -1,0 +1,43 @@
+<div class="document-list-container">
+  <h2>Gestion des documents</h2>
+  
+  <div class="controls">
+    <div class="filter-group">
+      <label for="categoryFilter">Filtrer par catégorie:</label>
+      <select id="categoryFilter" [(ngModel)]="selectedCategory" (change)="onCategoryChange()">
+        <option *ngFor="let cat of categories" [value]="cat">{{cat}}</option>
+      </select>
+    </div>
+  </div>
+  
+  <div *ngIf="isLoading" class="loading">Chargement en cours...</div>
+  
+  <div *ngIf="error" class="error-message">{{error}}</div>
+  
+  <div *ngIf="!isLoading" class="documents-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom du fichier</th>
+          <th>Catégorie</th>
+          <th>Extrait</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let doc of filteredDocuments">
+          <td>{{ doc.metadata.original_name || doc.metadata.filename }}</td>
+          <td>{{ doc.category }}</td>
+          <td class="text-preview">{{ doc.text }}</td>
+          <td>
+            <button (click)="deleteDocument(doc.id)" class="delete-button">Supprimer</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div *ngIf="filteredDocuments.length === 0" class="no-documents">
+      Aucun document trouvé pour cette catégorie.
+    </div>
+  </div>
+</div>

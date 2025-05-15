@@ -1,0 +1,40 @@
+<div class="chat-container">
+    <h2>Chatbot RAG</h2>
+    
+    <div class="chat-controls">
+      <select [(ngModel)]="selectedCategory" class="category-select">
+        <option *ngFor="let cat of categories" [value]="cat">{{cat}}</option>
+      </select>
+    </div>
+    
+    <div class="chat-messages">
+      <div *ngFor="let msg of messages" [class.user-message]="msg.sender === 'user'" 
+           [class.bot-message]="msg.sender === 'bot'" class="message">
+        <div class="message-sender">{{msg.sender === 'user' ? 'Vous' : 'Assistant'}}</div>
+        <div class="message-text">{{msg.text}}</div>
+      </div>
+      
+      <div *ngIf="isLoading" class="loading-message">
+        <div class="message-sender">Assistant</div>
+        <div class="message-text">Recherche en cours...</div>
+      </div>
+    </div>
+    
+    <div class="chat-input">
+      <input [(ngModel)]="userInput" placeholder="Posez votre question..." 
+             (keyup.enter)="sendMessage()">
+      <button (click)="sendMessage()" [disabled]="!userInput.trim() || isLoading">Envoyer</button>
+    </div>
+    
+    <div *ngIf="results.length > 0" class="results-section">
+      <h3>Résultats pertinents:</h3>
+      <div *ngFor="let result of results" class="result-item">
+        <div class="result-header">
+          <span class="result-category">{{result.category}}</span>
+          <span class="result-score">Score: {{result.score | number:'1.2-2'}}</span>
+        </div>
+        <div class="result-filename">{{result.metadata.original_name || result.metadata.filename}}</div>
+        <div class="result-text">{{result.text}}</div>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,7 @@
+flask
+flask-cors
+dotenv
+chromadb
+python-dotenv
+requests
+flask-socketio

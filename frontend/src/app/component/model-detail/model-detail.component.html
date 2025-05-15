@@ -1,0 +1,162 @@
+<div class="container mt-4">
+  <div class="card position-relative">
+    <!-- Loading Spinner -->
+    <app-spinner></app-spinner>
+
+    <!-- Error Message -->
+    <div class="alert alert-danger m-3" *ngIf="error">
+      {{error}}
+    </div>
+
+    <!-- Model Details -->
+    <div class="card-body" *ngIf="model">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">{{model.name}}</h2>
+        <span [class]="getStatusClass(model.status)">{{model.status}}</span>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <p class="text-muted">{{model.description}}</p>
+          <p><strong>Created:</strong> {{model.dateCreated | date:'medium'}}</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-primary me-2" (click)="triggerTraining()" 
+            [disabled]="model.status === 'Training' || model?.files?.length === 0">
+            <span *ngIf="model.status !== 'Training'; else trainingSpinner">
+              <i class="bi bi-play-circle"></i> Train Model
+            </span>
+            <ng-template #trainingSpinner>
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                 Training...
+                </ng-template>
+          </button>
+          <button class="btn btn-secondary" (click)="reembedModel()"
+            [disabled]="model.embeddingStatus === 'Processing'">
+            <span *ngIf="model.embeddingStatus !== 'Processing'; else embeddingSpinner">
+              <i class="bi bi-arrow-repeat"></i> Re-embed Documents
+            </span>
+            <ng-template #embeddingSpinner>
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              Embedding...
+            </ng-template>
+          </button>
+        </div>
+      </div>
+
+      <!-- Embedding Status -->
+      <div class="card mb-4" *ngIf="model.embeddingStatus === 'Processing'">
+        <div class="card-header">
+          <h5 class="mb-0">Document Embedding Progress</h5>
+        </div>
+        <div class="card-body">
+          <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" 
+                 [style.width.%]="model.embeddingProgress || 0"
+                 [attr.aria-valuenow]="model.embeddingProgress"
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+              {{model.embeddingProgress}}%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vector Store Info -->
+      <div class="card mb-4" *ngIf="model.vectorStore">
+        <div class="card-header">
+          <h5 class="mb-0">Vector Store Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <p><strong>Document Count:</strong> {{model.vectorStore.documentCount}}</p>
+            </div>
+            <div class="col-md-4">
+              <p><strong>Last Updated:</strong> {{model.vectorStore.lastUpdated | date:'medium'}}</p>
+            </div>
+            <div class="col-md-4">
+              <p><strong>Status:</strong>
+                <span [class]="'badge ' + (model.vectorStore.status === 'active' ? 'bg-success' : 'bg-warning')">
+                  {{model.vectorStore.status}}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Training Logs -->
+      <div class="card mb-4" *ngIf="model.trainingLogs && model.trainingLogs.length > 0">
+        <div class="card-header">
+          <h5 class="mb-0">Training Logs</h5>
+        </div>
+        <div class="card-body">
+          <div class="logs-container bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+            <pre class="mb-0"><code>{{model.trainingLogs.join('\n')}}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Management -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Training Files</h5>
+        </div>
+        <div class="card-body">
+          <!-- File Upload -->
+          <div class="mb-4">
+            <div class="input-group">
+              <input type="file" class="form-control" multiple accept=".pdf"
+                     (change)="onFileSelect($event)">
+              <button class="btn btn-outline-primary" (click)="uploadFiles()"
+                      [disabled]="selectedFiles.length === 0">
+                <i class="bi bi-upload"></i> Upload Files
+              </button>
+            </div>
+            <small class="text-muted">Only PDF files are supported</small>
+            
+            <!-- Selected Files Preview -->
+            <div class="mt-2" *ngIf="selectedFiles.length > 0">
+              <p class="mb-1">Selected files:</p>
+              <ul class="list-group">
+                <li class="list-group-item" *ngFor="let file of selectedFiles">
+                  {{file.name}}
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Files List -->
+          <div class="table-responsive">
+            <table class="table table-hover" *ngIf="model.files.length > 0">
+              <thead>
+                <tr>
+                  <th>File Name</th>
+                  <th>Path</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let file of model.files">
+                  <td>{{file.name}}</td>
+                  <td class="text-muted">{{file.path}}</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-danger" (click)="deleteFile(file.id)">
+                      <i class="bi bi-trash"></i> Delete
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="text-center p-4" *ngIf="model.files.length === 0">
+              <p class="text-muted mb-0">No files uploaded yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

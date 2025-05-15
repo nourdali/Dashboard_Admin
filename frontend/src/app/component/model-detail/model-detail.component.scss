@@ -1,0 +1,92 @@
+.card {
+  .card-header {
+    h2 {
+      margin: 0;
+      color: white;
+    }
+    
+    h5 {
+      margin: 0;
+      color: white;
+    }
+  }
+}
+
+.badge {
+  padding: 0.5em 0.8em;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.logs-container {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+}
+
+.input-group {
+  .form-control {
+    &:focus {
+      border-color: var(--accent-color);
+      box-shadow: none;
+    }
+  }
+  
+  .btn {
+    &:focus {
+      box-shadow: none;
+    }
+  }
+}
+
+.table {
+  margin-bottom: 0;
+  
+  th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+  }
+  
+  td {
+    vertical-align: middle;
+    
+    &.text-muted {
+      font-size: 0.9rem;
+    }
+  }
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  
+  i {
+    margin-right: 0.25rem;
+  }
+}
+
+.selected-files {
+  .list-group-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    
+    &:first-child {
+      border-top-left-radius: 0.25rem;
+      border-top-right-radius: 0.25rem;
+    }
+    
+    &:last-child {
+      border-bottom-left-radius: 0.25rem;
+      border-bottom-right-radius: 0.25rem;
+    }
+  }
+}

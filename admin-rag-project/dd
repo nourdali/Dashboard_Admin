@@ -1,0 +1,649 @@
+from datetime import datetime
+import traceback
+from flask import Flask, render_template, request, jsonify, send_file
+from langchain import hub
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyMuPDFLoader, UnstructuredExcelLoader, UnstructuredXMLLoader
+from flask_cors import CORS
+import os
+import warnings
+from dotenv import load_dotenv
+import json
+import tiktoken
+import shutil
+from werkzeug.utils import secure_filename
+import requests
+
+app = Flask(__name__)
+CORS(app, resources={
+    r"/embed": {"origins": "*"},
+    r"/upload": {"origins": "*"}
+})
+
+# Configuration
+ALLOWED_EXTENSIONS = {'pdf', 'xlsx', 'xls', 'xml'}
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
+BASE_DATA_PATH = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DATA_PATH, "uploads")
+CHROMA_DB_PATH = os.path.join(BASE_DATA_PATH, "chroma_db")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(CHROMA_DB_PATH, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Initialisation Ollama
+embeddings = OllamaEmbeddings(model='nomic-embed-text', base_url="http://localhost:11434")
+model = ChatOllama(model="llama3.2:1b", base_url="http://localhost:11434")
+
+# Variable pour l'historique du chat
+chat_history = []
+
+### 1. API de Gestion des Modèles ###
+
+@app.route('/models', methods=['GET'])
+def list_models():
+    """Liste tous les modèles disponibles"""
+    try:
+        models = []
+        for model_name in os.listdir(app.config['UPLOAD_FOLDER']):
+            model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_name)
+            if os.path.isdir(model_path):
+                files = []
+                for file in os.listdir(model_path):
+                    file_path = os.path.join(model_path, file)
+                    if os.path.isfile(file_path):
+                        files.append({
+                            'name': file,
+                            'size': os.path.getsize(file_path),
+                            'modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
+                        })
+                
+                models.append({
+                    'id': model_name,
+                    'name': model_name,
+                    'files': files,
+                    'file_count': len(files),
+                    'created': datetime.fromtimestamp(os.path.getctime(model_path)).isoformat()
+                })
+        
+        return jsonify({
+            'models': models,
+            'count': len(models)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/models/<model_id>', methods=['GET'])
+def get_model(model_id):
+    """Récupère les détails d'un modèle spécifique"""
+    try:
+        model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_id)
+        if not os.path.exists(model_path):
+            return jsonify({
+                'error': 'Model not found',
+                'model_id': model_id
+            }), 404
+            
+        files = []
+        for file in os.listdir(model_path):
+            file_path = os.path.join(model_path, file)
+            if os.path.isfile(file_path):
+                files.append({
+                    'name': file,
+                    'size': os.path.getsize(file_path),
+                    'modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
+                })
+                
+        return jsonify({
+            'id': model_id,
+            'name': model_id,
+            'files': files,
+            'file_count': len(files),
+            'created': datetime.fromtimestamp(os.path.getctime(model_path)).isoformat()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/models/<model_id>', methods=['DELETE'])
+def delete_model(model_id):
+    """Supprime un modèle et tous ses fichiers"""
+    try:
+        model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_id)
+        if not os.path.exists(model_path):
+            return jsonify({
+                'error': 'Model not found',
+                'model_id': model_id
+            }), 404
+            
+        shutil.rmtree(model_path)
+        
+        vector_store_path = os.path.join(CHROMA_DB_PATH, model_id)
+        if os.path.exists(vector_store_path):
+            shutil.rmtree(vector_store_path)
+            
+        return jsonify({
+            'message': 'Model deleted successfully',
+            'model_id': model_id
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+### 2. API de Gestion des Fichiers ###
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    """Upload des fichiers pour un modèle"""
+    try:
+        if 'files[]' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+            
+        if 'model_name' not in request.form:
+            return jsonify({'error': 'Model name not provided'}), 400
+            
+        model_name = request.form['model_name']
+        files = request.files.getlist('files[]')
+        
+        model_folder = os.path.join(app.config['UPLOAD_FOLDER'], model_name)
+        os.makedirs(model_folder, exist_ok=True)
+        
+        uploaded_files = []
+        for file in files:
+            if file.filename == '':
+                continue
+                
+            if file.filename.lower().endswith(('.pdf', '.xlsx', '.xls', '.xml')):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(model_folder, filename)
+                
+                if os.path.exists(filepath):
+                    return jsonify({
+                        'error': f'File {filename} already exists',
+                        'existing_files': os.listdir(model_folder)
+                    }), 409
+                
+                file.save(filepath)
+                uploaded_files.append({
+                    'name': filename,
+                    'path': filepath,
+                    'size': os.path.getsize(filepath)
+                })
+        
+        if not uploaded_files:
+            return jsonify({'error': 'No valid files were uploaded'}), 400
+            
+        return jsonify({
+            'message': 'Files uploaded successfully',
+            'model_name': model_name,
+            'uploaded_files': uploaded_files,
+            'destination_folder': model_folder
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/update-model', methods=['POST'])
+def update_model_files():
+    """Met à jour les fichiers d'un modèle existant"""
+    try:
+        if 'files[]' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+            
+        if 'model_id' not in request.form:
+            return jsonify({'error': 'Model ID not provided'}), 400
+            
+        model_id = request.form['model_id']
+        files = request.files.getlist('files[]')
+        
+        model_folder = os.path.join(app.config['UPLOAD_FOLDER'], model_id)
+        if not os.path.exists(model_folder):
+            return jsonify({
+                'error': 'Model folder not found',
+                'model_id': model_id
+            }), 404
+        
+        updated_files = []
+        for file in files:
+            if file.filename == '':
+                continue
+                
+            if file.filename.lower().endswith(('.pdf', '.xlsx', '.xls', '.xml')):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(model_folder, filename)
+                
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    
+                file.save(filepath)
+                updated_files.append({
+                    'name': filename,
+                    'path': filepath,
+                    'size': os.path.getsize(filepath),
+                    'status': 'replaced' if os.path.exists(filepath) else 'added'
+                })
+        
+        if not updated_files:
+            return jsonify({'error': 'No valid files were uploaded'}), 400
+        
+        return jsonify({
+            'message': 'Model files updated successfully',
+            'model_id': model_id,
+            'updated_files': updated_files,
+            'model_folder': model_folder
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/models/<model_id>/files/<path:filename>', methods=['GET'])
+def get_model_file(model_id, filename):
+    """Télécharge un fichier spécifique"""
+    try:
+        model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_id)
+        if not os.path.exists(model_path):
+            return jsonify({
+                'error': 'Model not found',
+                'model_id': model_id
+            }), 404
+            
+        file_path = os.path.join(model_path, filename)
+        if not os.path.exists(file_path):
+            return jsonify({
+                'error': 'File not found',
+                'model_id': model_id,
+                'filename': filename
+            }), 404
+            
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/models/<model_id>/files/<path:filename>', methods=['DELETE'])
+def delete_model_file(model_id, filename):
+    """Supprime un fichier spécifique"""
+    try:
+        model_path = os.path.join(app.config['UPLOAD_FOLDER'], model_id)
+        if not os.path.exists(model_path):
+            return jsonify({
+                'error': 'Model not found',
+                'model_id': model_id
+            }), 404
+            
+        file_path = os.path.join(model_path, filename)
+        if not os.path.exists(file_path):
+            return jsonify({
+                'error': 'File not found',
+                'model_id': model_id,
+                'filename': filename
+            }), 404
+            
+        os.remove(file_path)
+        
+        try:
+            docs = []
+            for file in os.listdir(model_path):
+                file_path = os.path.join(model_path, file)
+                if file.lower().endswith(('.pdf', '.xlsx', '.xls', '.xml')):
+                    pages = load_documents(file_path)
+                    if pages:
+                        docs.extend(pages)
+            
+            if docs:
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=1000,
+                    chunk_overlap=100,
+                    length_function=len,
+                    is_separator_regex=False
+                )
+                chunks = text_splitter.split_documents(docs)
+                
+                vector_store_path = os.path.join(CHROMA_DB_PATH, model_id)
+                model_vector_store = Chroma(
+                    collection_name=f"model_{model_id}",
+                    embedding_function=embeddings,
+                    persist_directory=vector_store_path
+                )
+                
+                model_vector_store._collection.delete()
+                model_vector_store.add_documents(documents=chunks)
+                model_vector_store.persist()
+                
+        except Exception as embed_error:
+            return jsonify({
+                'warning': 'File deleted but re-embedding failed',
+                'embed_error': str(embed_error),
+                'model_id': model_id,
+                'filename': filename
+            }), 207
+            
+        return jsonify({
+            'message': 'File deleted successfully',
+            'model_id': model_id,
+            'filename': filename
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+### 3. API d'Embedding ###
+
+@app.route('/embed', methods=['POST'])
+def embed_documents():
+    """Lance l'embedding pour un modèle"""
+    try:
+        if request.is_json:
+            data = request.get_json()
+            model_name = data.get('model_name')
+        elif request.form:
+            model_name = request.form.get('model_name')
+        else:
+            return jsonify({'error': 'Unsupported content type'}), 415
+            
+        model_folder = os.path.join(UPLOAD_FOLDER, model_name)
+        if not os.path.exists(model_folder):
+            return jsonify({
+                'error': f'Model folder not found',
+                'details': f'Path: {model_folder}',
+                'available_models': os.listdir(UPLOAD_FOLDER)
+            }), 404
+        
+        print(f"\nStarting embedding for model: {model_name}")
+        docs = []
+        valid_extensions = ('.pdf', '.xlsx', '.xls', '.xml')
+        invalid_files = []
+        
+        for file in os.listdir(model_folder):
+            file_path = os.path.join(model_folder, file)
+            if file.lower().endswith(valid_extensions):
+                try:
+                    pages = load_documents(file_path)
+                    if pages:
+                        docs.extend(pages)
+                        print(f"Loaded {len(pages)} pages from {file}")
+                    else:
+                        invalid_files.append(f"Empty: {file}")
+                except Exception as e:
+                    invalid_files.append(f"Error in {file}: {str(e)}")
+            else:
+                invalid_files.append(f"Unsupported format: {file}")
+        
+        if not docs:
+            return jsonify({
+                'error': 'No valid documents found',
+                'details': {
+                    'scanned_files': len(os.listdir(model_folder)),
+                    'invalid_files': invalid_files
+                }
+            }), 400
+        
+        print(f"Processing {len(docs)} total pages...")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100,
+            length_function=len,
+            is_separator_regex=False
+        )
+        chunks = text_splitter.split_documents(docs)
+        print(f"Created {len(chunks)} chunks")
+        
+        vector_store_path = os.path.join(CHROMA_DB_PATH, model_name)
+        try:
+            model_vector_store = Chroma(
+                collection_name=f"model_{model_name}",
+                embedding_function=embeddings,
+                persist_directory=vector_store_path
+            )
+            
+            print("Adding documents to vector store...")
+            model_vector_store.add_documents(documents=chunks)
+            model_vector_store.persist()
+            print("Vector store updated successfully")
+            
+            return jsonify({
+                'status': 'success',
+                'model_name': model_name,
+                'statistics': {
+                    'documents_processed': len(docs),
+                    'chunks_created': len(chunks),
+                    'invalid_files': invalid_files
+                },
+                'paths': {
+                    'source_folder': model_folder,
+                    'vector_store': vector_store_path
+                },
+                'timestamp': datetime.now().isoformat()
+            }), 200
+            
+        except Exception as db_error:
+            print(f"Vector store error: {str(db_error)}")
+            return jsonify({
+                'error': 'Vector store operation failed',
+                'details': str(db_error),
+                'traceback': traceback.format_exc()
+            }), 500
+            
+
+    except Exception as e:
+        print(f"\n!!! ERROR in /embed endpoint !!!")
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/reembed', methods=['POST'])
+def reembed_model_files():
+    """Relance l'embedding pour un modèle existant"""
+    try:
+        data = request.get_json()
+        if not data or 'model_id' not in data:
+            return jsonify({'error': 'model_id is required'}), 400
+
+        model_id = data['model_id']
+        model_folder = os.path.join(app.config['UPLOAD_FOLDER'], model_id)
+
+        if not os.path.exists(model_folder):
+            return jsonify({'error': f'Model folder not found for {model_id}'}), 404
+
+        docs = []
+        for file in os.listdir(model_folder):
+            file_path = os.path.join(model_folder, file)
+            if file.lower().endswith(('.pdf', '.xlsx', '.xls', '.xml')):
+                pages = load_documents(file_path)
+                if pages:
+                    docs.extend(pages)
+        
+        if not docs:
+            return jsonify({'warning': 'No documents found for embedding'}), 200
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100,
+            length_function=len,
+            is_separator_regex=False
+        )
+        chunks = text_splitter.split_documents(docs)
+        
+        model_vector_store = get_vector_store(model_id)
+        
+        model_vector_store.add_documents(documents=chunks)
+        model_vector_store.persist()
+
+        return jsonify({
+            'message': 'Re-embedding completed successfully',
+            'model_id': model_id,
+            'num_documents': len(docs),
+            'num_chunks': len(chunks)
+        }), 200
+            
+    except Exception as embed_error:
+        return jsonify({
+            'error': 'Re-embedding failed',
+            'details': str(embed_error),
+            'traceback': traceback.format_exc()
+        }), 500
+
+### 4. API de Chat ###
+
+@app.route('/ask', methods=['POST'])
+def ask_question():
+    """Pose une question au modèle"""
+    data = request.get_json()
+    question = data.get('question', '')
+    model_name = data.get('model_name', '')
+    
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+        
+    if not model_name:
+        return jsonify({'error': 'No model name provided'}), 400
+    
+    try:
+        model_vector_store = Chroma(
+            collection_name=f"model_{model_name}",
+            embedding_function=embeddings,
+            persist_directory=os.path.join(CHROMA_DB_PATH, model_name)
+        )
+        
+        if len(model_vector_store.get()) == 0:
+            return jsonify({'error': f'No documents found for model {model_name}'}), 404
+            
+        model_retriever = model_vector_store.as_retriever(
+            search_type="mmr",
+            search_kwargs={'k': 1, 'fetch_k': 50, 'lambda_mult': 0.5}
+        )
+        
+        chat_history.append({
+            'text': question,
+            'sender': 'user',
+            'timestamp': str(datetime.now())
+        })
+        
+        # Configuration du prompt
+        prompt_template = ChatPromptTemplate.from_template("""
+            You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question.
+            If you don't know the answer, just say that you don't know.
+            Answer in 1-6 short lines maximum. Be extremely concise and stick strictly to the facts found in the context.
+            Question: {question} 
+            Context: {context} 
+            Answer:
+        """)
+        
+        rag_chain = (
+            {"context": model_retriever | RunnableLambda(format_docs), "question": RunnablePassthrough()}
+            | prompt_template
+            | model
+            | StrOutputParser()
+        )
+        
+        output = rag_chain.invoke(question)
+        output = "\n".join(output.split("\n")[:6])
+
+        chat_history.append({
+            'text': output,
+            'sender': 'bot',
+            'timestamp': str(datetime.now())
+        })
+        
+        return jsonify({
+            'question': question,
+            'answer': output,
+            'model_name': model_name
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/history', methods=['GET'])
+def get_history():
+    """Récupère l'historique du chat"""
+    return jsonify(chat_history)
+
+### 5. API de Configuration ###
+
+@app.route('/set-collection', methods=['POST'])
+def set_collection():
+    """Change la collection vectorielle active"""
+    data = request.get_json()
+    collection = data.get('collection')
+    if collection not in ['technical', 'administrative', 'general']:
+        return jsonify({'error': 'Invalid collection name'}), 400
+    
+    global vector_store, retriever, ACTIVE_COLLECTION
+    ACTIVE_COLLECTION = collection
+    vector_store = get_vector_store()
+    retriever = vector_store.as_retriever(
+        search_type="mmr",
+        search_kwargs={'k': 1, 'fetch_k': 50, 'lambda_mult': 0.5}
+    )
+    return jsonify({'message': f'Switched to collection: {collection}'}), 200
+
+### Fonctions utilitaires ###
+
+def load_documents(file_path):
+    """Charge un document selon son extension"""
+    ext = os.path.splitext(file_path)[1].lower()
+    try:
+        if ext == '.pdf':
+            loader = PyMuPDFLoader(file_path)
+            return loader.load()
+        elif ext in ['.xlsx', '.xls']:
+            loader = UnstructuredExcelLoader(file_path)
+            return loader.load()
+        elif ext == '.xml':
+            loader = UnstructuredXMLLoader(file_path)
+            return loader.load()
+        else:
+            print(f"Format non pris en charge pour {file_path}")
+            return []
+    except Exception as e:
+        print(f"Erreur lors du chargement de {file_path}: {str(e)}")
+        return []
+
+def format_docs(docs):
+    """Formate les documents pour le prompt"""
+    return "\n\n".join([doc.page_content for doc in docs]) if docs else "Aucune information trouvée"
+
+def get_vector_store(model_id):
+    """Récupère ou crée un vector store"""
+    vector_store_path = os.path.join(CHROMA_DB_PATH, model_id)
+    return Chroma(
+        collection_name=f"model_{model_id}",
+        embedding_function=embeddings,
+        persist_directory=vector_store_path
+    )
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000, debug=True)

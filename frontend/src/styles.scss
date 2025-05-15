@@ -1,0 +1,76 @@
+/* Import Bootstrap and Bootstrap Icons */
+@import "~bootstrap/scss/bootstrap";
+@import "~bootstrap-icons/font/bootstrap-icons.css";
+
+/* Custom Variables */
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #34495e;
+  --accent-color: #1abc9c;
+}
+
+/* Global Styles */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f5f5;
+}
+
+/* Card Customization */
+.card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  .card-header {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 8px 8px 0 0;
+  }
+}
+
+/* Button Styles */
+.btn-primary {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  
+  &:hover {
+    background-color: darken(#1abc9c, 10%);
+    border-color: darken(#1abc9c, 10%);
+  }
+}
+
+/* Table Customization */
+.table {
+  th {
+    background-color: #f8f9fa;
+  }
+  
+  tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+}
+
+/* Form Controls */
+.form-control:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 0.2rem rgba(26, 188, 156, 0.25);
+}
+
+/* Custom Scrollbar for Training Logs */
+.logs-container {
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}
