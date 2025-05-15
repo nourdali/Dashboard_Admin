@@ -63,7 +63,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
               if (status.status === 'Completed') {
                 this.toastService.success('Document embedding completed');
                 this.embeddingStatusSubscription?.unsubscribe();
-                this.loadVectorStoreInfo(modelId);
+                // this.loadVectorStoreInfo(modelId);
               } else if (status.status === 'Error') {
                 this.toastService.error('Document embedding failed: ' + status.error);
                 this.embeddingStatusSubscription?.unsubscribe();
@@ -78,18 +78,18 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadVectorStoreInfo(modelId: string): void {
-    this.apiService.getVectorStore(modelId).subscribe({
-      next: (vectorStore) => {
-        if (this.model) {
-          this.model.vectorStore = vectorStore;
-        }
-      },
-      error: (error) => {
-        console.error('Error loading vector store info:', error);
-      }
-    });
-  }
+  // private loadVectorStoreInfo(modelId: string): void {
+  //   this.apiService.getVectorStore(modelId).subscribe({
+  //     next: (vectorStore) => {
+  //       if (this.model) {
+  //         this.model.vectorStore = vectorStore;
+  //       }
+  //     },
+  //     error: (error) => {
+  //       console.error('Error loading vector store info:', error);
+  //     }
+  //   });
+  // }
 
   async loadModel(modelId: string): Promise<void> {
     this.error = null;
@@ -117,9 +117,9 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
       };
 
       // Load vector store info if not included in model response
-      if (!response.vectorStore) {
-        this.loadVectorStoreInfo(modelId);
-      }
+      // if (!response.vectorStore) {
+      //   this.loadVectorStoreInfo(modelId);
+      // }
       
     } catch (error: any) {
       console.error('Load Model Error:', error);
@@ -156,7 +156,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     this.loadingService.show('Uploading files...');
 
     try {
-      await this.apiService.updateModelFiles(this.model.id, this.selectedFiles).toPromise();
+      await this.apiService.uploadModelFiles(this.model.id, this.selectedFiles).toPromise();
       
       // Start embedding process for new files
       this.loadingService.setMessage('Starting document embedding...');

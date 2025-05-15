@@ -44,25 +44,31 @@ def create_model():
     except Exception as e:
         logger.error(f"Error creating model: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
-'''  
+
 @app.route('/api/models/upload-model', methods=['POST'])
-def upload_files(model_id, files):
+def upload_file():
     try:
+        # Access model_id from the form data
+        model_name = request.form.get('model_name')
+        if not model_name:
+            return jsonify({"error": "Missing model_name"}), 400
+
         if 'files[]' not in request.files:
             return jsonify({"error": "No files provided"}), 400
-            
+
         files = request.files.getlist('files[]')
         valid_files = [f for f in files if f.filename and allowed_file(f.filename)]
-        
+
         if not valid_files:
             return jsonify({"error": "No valid files provided"}), 400
-            
-        response, status_code = FileService.update_model_files(model_id, valid_files)
+
+        response, status_code = ModelService.upload_file(model_name, valid_files)
         return jsonify(response), status_code
+
     except Exception as e:
         logger.error(f"Error uploading model files: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
-'''      
+   
 @app.route('/api/models', methods=['GET'])
 def list_models():
     try:
@@ -92,23 +98,20 @@ def delete_model(model_id):
         return jsonify({"error": str(e)}), 500
 
 # Model Files Routes
-@app.route('/api/models/{model_id}/files', methods=['POST'])
-def update_model_files(model_id, files):
+@app.route('/api/models/<model_id>/files', methods=['POST'])
+def update_model_files(model_id):
     try:
         if 'files[]' not in request.files:
             return jsonify({"error": "No files provided"}), 400
             
         files = request.files.getlist('files[]')
-        #valid_files = [f for f in files if f.filename and allowed_file(f.filename)]
-        
-        if not files:
-            return jsonify({"error": "No valid files provided"}), 400
-            
         response, status_code = FileService.update_model_files(model_id, files)
         return jsonify(response), status_code
+        
     except Exception as e:
-        logger.error(f"Error uploading model files: {str(e)}", exc_info=True)
+        logger.error(f"Error updating model files: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/models/<model_id>/files/<path:filename>', methods=['GET'])
 def get_model_file(model_id, filename):
@@ -180,3 +183,4 @@ def not_found(error):
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+
