@@ -44,9 +44,10 @@ def create_model():
     except Exception as e:
         logger.error(f"Error creating model: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+from flask import request, jsonify
 
 @app.route('/api/models/upload-model', methods=['POST'])
-def upload_file():
+def upload_files():
     try:
         # Access model_id from the form data
         model_name = request.form.get('model_name')
@@ -62,13 +63,13 @@ def upload_file():
         if not valid_files:
             return jsonify({"error": "No valid files provided"}), 400
 
-        response, status_code = ModelService.upload_file(model_name, valid_files)
+        response, status_code = ModelService.upload_files(model_name, valid_files)
         return jsonify(response), status_code
 
     except Exception as e:
         logger.error(f"Error uploading model files: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
-   
+
 @app.route('/api/models', methods=['GET'])
 def list_models():
     try:
