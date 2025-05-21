@@ -63,7 +63,7 @@ def upload_files():
         if not valid_files:
             return jsonify({"error": "No valid files provided"}), 400
 
-        response, status_code = ModelService.upload_files(model_name, valid_files)
+        response, status_code = ModelService.upload_file(model_name, valid_files)
         return jsonify(response), status_code
 
     except Exception as e:

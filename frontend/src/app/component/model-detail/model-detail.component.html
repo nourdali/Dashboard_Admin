@@ -22,7 +22,7 @@
         </div>
         <div class="col-md-4 text-end">
           <button class="btn btn-primary me-2" (click)="triggerTraining()" 
-            [disabled]="model.status === 'Training' || model?.files?.length === 0">
+            [disabled]="model.status === 'Training' || model.files.length === 0">
             <span *ngIf="model.status !== 'Training'; else trainingSpinner">
               <i class="bi bi-play-circle"></i> Train Model
             </span>
@@ -63,30 +63,7 @@
         </div>
       </div>
 
-      <!-- Vector Store Info -->
-      <div class="card mb-4" *ngIf="model.vectorStore">
-        <div class="card-header">
-          <h5 class="mb-0">Vector Store Information</h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-4">
-              <p><strong>Document Count:</strong> {{model.vectorStore.documentCount}}</p>
-            </div>
-            <div class="col-md-4">
-              <p><strong>Last Updated:</strong> {{model.vectorStore.lastUpdated | date:'medium'}}</p>
-            </div>
-            <div class="col-md-4">
-              <p><strong>Status:</strong>
-                <span [class]="'badge ' + (model.vectorStore.status === 'active' ? 'bg-success' : 'bg-warning')">
-                  {{model.vectorStore.status}}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
+     
       <!-- Training Logs -->
       <div class="card mb-4" *ngIf="model.trainingLogs && model.trainingLogs.length > 0">
         <div class="card-header">
@@ -110,7 +87,7 @@
             <div class="input-group">
               <input type="file" class="form-control" multiple accept=".pdf"
                      (change)="onFileSelect($event)">
-              <button class="btn btn-outline-primary" (click)="uploadFiles()"
+              <button class="btn btn-outline-primary" (click)="uploadModelFiles()"
                       [disabled]="selectedFiles.length === 0">
                 <i class="bi bi-upload"></i> Upload Files
               </button>
@@ -134,7 +111,6 @@
               <thead>
                 <tr>
                   <th>File Name</th>
-                  <th>Path</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -142,8 +118,7 @@
                 <tr *ngFor="let file of model.files">
                   <td>{{file.name}}</td>
                   <td class="text-muted">{{file.path}}</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-danger" (click)="deleteFile(file.id)">
+                  <td>                    <button class="btn btn-sm btn-outline-danger" (click)="deleteFile(file.name)">
                       <i class="bi bi-trash"></i> Delete
                     </button>
                   </td>

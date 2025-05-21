@@ -13,11 +13,21 @@ class ExternalService:
     @staticmethod
     def forward_request(url, method='POST', files=None, data=None):
         import requests
+        
+        method = method.upper()
         if method == 'POST':
             response = requests.post(url, files=files, data=data)
+        elif method == 'GET':
+            response = requests.get(url, params=data)
+        elif method == 'DELETE':
+            response = requests.delete(url, data=data)
+        else:
+            return {"error": "Unsupported HTTP method"}, 400
+
+        try:
             return response.json(), response.status_code
-    
-    
+        except ValueError:
+            return {"error": "Invalid JSON response"}, response.status_code
     
 '''
 class DocumentService:

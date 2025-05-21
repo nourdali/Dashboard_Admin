@@ -9,8 +9,7 @@ import { ApiService } from '../../services/api.service';
 export class FileUploadComponent {
   @Output() uploadSuccess = new EventEmitter<any>();
   selectedFile: File | null = null;
-  selectedCategory: string = 'SALLE DE BAINS';
-  categories = ['SALLE DE BAINS', 'REVETEMENT', 'MENUISERIE EXTERIEURE'];
+  
   isLoading = false;
   error: string | null = null;
 
@@ -30,7 +29,9 @@ export class FileUploadComponent {
     this.error = null;
 
     try {
-      const result = await this.apiService.uploadFile(this.selectedFile, this.selectedCategory);
+      // You need to provide a valid modelId here
+      const modelId = 'your-model-id'; // Replace this with the actual model ID
+      const result = this.apiService.uploadModelFiles(modelId, [this.selectedFile]);
       this.uploadSuccess.emit(result);
       this.selectedFile = null;
     } catch (error: any) {

@@ -91,9 +91,7 @@
                                     [class.bg-warning]="model.vectorStore.status === 'inactive'">
                     {{model.vectorStore.documentCount}} docs
                   </span>
-                  <small class="ms-2 text-muted">
-                    {{model.vectorStore.lastUpdated | date:'short'}}
-                  </small>
+                  <td> {{ model.dateCreated ? (model.dateCreated | date:'short') : 'N/A' }}</td>
                 </span>
                 <span *ngIf="!model.vectorStore" class="text-muted">
                   No vector store

@@ -4,7 +4,7 @@
   <div class="controls">
     <div class="filter-group">
       <label for="categoryFilter">Filtrer par catégorie:</label>
-      <select id="categoryFilter" [(ngModel)]="selectedCategory" (change)="onCategoryChange()">
+      <select id="categoryFilter" [(ngModel)]="selectedCategory" (change)="onCategoryChange()" class="form-select">
         <option *ngFor="let cat of categories" [value]="cat">{{cat}}</option>
       </select>
     </div>
@@ -19,18 +19,18 @@
       <thead>
         <tr>
           <th>Nom du fichier</th>
-          <th>Catégorie</th>
-          <th>Extrait</th>
+          <th>Chemin</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let doc of filteredDocuments">
-          <td>{{ doc.metadata.original_name || doc.metadata.filename }}</td>
-          <td>{{ doc.category }}</td>
-          <td class="text-preview">{{ doc.text }}</td>
+          <td>{{ doc.metadata.filename }}</td>
+          <td class="text-muted">{{ doc.metadata.path || 'N/A' }}</td>
           <td>
-            <button (click)="deleteDocument(doc.id)" class="delete-button">Supprimer</button>
+            <button (click)="deleteDocument(doc)" class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-trash"></i> Supprimer
+            </button>
           </td>
         </tr>
       </tbody>

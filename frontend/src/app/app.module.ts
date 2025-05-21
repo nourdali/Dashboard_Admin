@@ -7,8 +7,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { FileUploadComponent } from './component/file-upload/file-upload.component';
-import { DocumentListComponent } from './component/document-list/document-list.component';
-import { ChatComponent } from './component/chat/chat.component';
 import { ModelCreationComponent } from './component/model-creation/model-creation.component';
 import { ModelListComponent } from './component/model-list/model-list.component';
 import { ModelDetailComponent } from './component/model-detail/model-detail.component';
@@ -22,8 +20,6 @@ import { WebSocketService } from './services/websocket.service';
   declarations: [
     AppComponent,
     FileUploadComponent,
-    DocumentListComponent,
-    ChatComponent,
     ModelCreationComponent,
     ModelListComponent,
     ModelDetailComponent,
