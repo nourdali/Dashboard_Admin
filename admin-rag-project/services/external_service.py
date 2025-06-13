@@ -83,10 +83,11 @@ class ModelService:
     @staticmethod
     def list_models() -> Tuple[Dict, int]:
         """List all available models"""
-        return ExternalService.forward_request(
+        result = ExternalService.forward_request(
             f"{settings.MODEL_SERVICE_URL}/models",
             method='GET'
         )
+        return result
         
     @staticmethod
     def get_model(model_id: str) -> Tuple[Dict, int]:

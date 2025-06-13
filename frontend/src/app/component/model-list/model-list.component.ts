@@ -92,16 +92,37 @@ export class ModelListComponent implements OnInit, OnDestroy {
     this.loadingService.show('Loading models...');
 
     try {
-      const result = await this.apiService.getModels(this.currentPage, this.pageSize).toPromise();
-      if (result?.models) {
+      const result = await this.apiService.getModels(this.currentPage, this.pageSize).subscribe({
+          next: (updatedModels) => {
+            console.log('Updated models:', updatedModels);
+            
+          },
+          error: (error) => {
+            console.error('Error loading model details:', error);
+          }
+        });
+      if (result) {
         // Get embedding status and vector store info for each model
+/*         const modelUpdates = result.models.map(model => 
+          forkJoin([
+            this.apiService.getEmbeddingStatus(model.id),
+            this.apiService.getVectorStore(model.id)
+          ]).pipe(
+            map(([embeddingStatus, vectorStore]) => ({
+              ...model,
+              embeddingStatus: embeddingStatus.status,
+              embeddingProgress: embeddingStatus.progress,
+              vectorStore
+            }))
+          )
+        ); */
         const modelUpdates = result.models
           .filter(model => model.embeddingStatus !== 'Completed')
           .map(model => {
             return this.apiService.getModel(model.id)
           });
 
-        forkJoin(modelUpdates).subscribe({
+        /* forkJoin(modelUpdates).subscribe({
           next: (updatedModels) => {
             this.models = updatedModels;
             this.totalModels = result.total;
@@ -110,7 +131,7 @@ export class ModelListComponent implements OnInit, OnDestroy {
           error: (error) => {
             console.error('Error loading model details:', error);
           }
-        });
+        }); */
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error loading models';
