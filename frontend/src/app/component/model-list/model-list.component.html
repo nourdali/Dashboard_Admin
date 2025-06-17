@@ -59,7 +59,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let model of filteredModels">
+            <tr *ngFor="let model of models">
               <td>{{model.name}}</td>
               <td>{{model.description}}</td>
               <td>
@@ -114,7 +114,7 @@
         </table>
 
         <!-- No Results Message -->
-        <div class="text-center my-4" *ngIf="filteredModels.length === 0">
+        <div class="text-center my-4" *ngIf="models.length === 0">
           <p class="text-muted">No models found</p>
         </div>
       </div>

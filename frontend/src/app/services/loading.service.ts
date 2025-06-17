@@ -13,11 +13,11 @@ export class LoadingService {
   private loadingSubject = new BehaviorSubject<LoadingState>({ isLoading: false });
   loading$: Observable<LoadingState> = this.loadingSubject.asObservable();
 
-  show(message?: string): void {
+  show(message?: string, p0?: string): void {
     this.loadingSubject.next({ isLoading: true, message });
   }
 
-  hide(): void {
+  hide(p0?: string): void {
     this.loadingSubject.next({ isLoading: false });
   }
 

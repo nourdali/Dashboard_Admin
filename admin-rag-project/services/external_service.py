@@ -9,25 +9,35 @@ settings = Config()
 logger = logging.getLogger(__name__)
 
 class ExternalService:
-
     @staticmethod
     def forward_request(url, method='POST', files=None, data=None):
         import requests
-        
         method = method.upper()
-        if method == 'POST':
-            response = requests.post(url, files=files, data=data)
-        elif method == 'GET':
-            response = requests.get(url, params=data)
-        elif method == 'DELETE':
-            response = requests.delete(url, data=data)
-        else:
-            return {"error": "Unsupported HTTP method"}, 400
-
+        logger.info(f"Sending {method} request to {url} with data: {data}, files: {[f[1][0] for f in files] if files else None}")
         try:
-            return response.json(), response.status_code
-        except ValueError:
-            return {"error": "Invalid JSON response"}, response.status_code
+            if method == 'POST':
+                if files:
+                    # Pour les requêtes avec fichiers, utiliser multipart/form-data
+                    response = requests.post(url, files=files, data=data)
+                else:
+                    # Pour les requêtes JSON, utiliser json=data
+                    response = requests.post(url, json=data)
+            elif method == 'GET':
+                response = requests.get(url, params=data)
+            elif method == 'DELETE':
+                response = requests.delete(url, data=data)
+            else:
+                return {"error": "Unsupported HTTP method"}, 400
+            
+            logger.info(f"Received response: {response.status_code} - {response.text}")
+            try:
+                return response.json(), response.status_code
+            except ValueError:
+                logger.error(f"Invalid JSON response from {url}: {response.text}")
+                return {"error": "Invalid JSON response"}, response.status_code
+        except RequestException as e:
+            logger.error(f"Request failed: {str(e)}")
+            return {"error": f"Request failed: {str(e)}"}, 500
     
 '''
 class DocumentService:
@@ -82,7 +92,7 @@ class ModelService:
     
     @staticmethod
     def create_model(name: str, description: Optional[str] = None) -> Tuple[Dict, int]:
-        """Create a new model"""
+        logger.info(f"Creating model with name: {name}, description: {description}")
         return ExternalService.forward_request(
             f"{settings.MODEL_SERVICE_URL}/models",
             method='POST',
@@ -117,12 +127,12 @@ class ModelService:
 
     @staticmethod
     def upload_file(model_name: str, files: List[Any]) -> Tuple[Dict, int]:
-        """Upload files for a specific model"""
-        files_dict = {f'files[]': (f.filename, f.stream, f.content_type) for f in files}
+        files_list = [(f'files[]', (f.filename, f.stream, f.content_type)) for f in files]
+        logger.info(f"Sending {len(files_list)} files to external service: {[f[1][0] for f in files_list]}")
         return ExternalService.forward_request(
             f"{settings.MODEL_SERVICE_URL}/upload",
             method='POST',
-            files=files_dict,
+            files=files_list,
             data={'model_name': model_name}
         )
         
@@ -207,12 +217,12 @@ class FileService:
 class EmbeddingService:
     @staticmethod
     def embed_documents(model_name: str) -> Tuple[Dict, int]:
-        """Trigger document embedding for a specific model"""
+        
         return ExternalService.forward_request(
             f"{settings.MODEL_SERVICE_URL}/embed",
             method='POST',
             data={'model_name': model_name}
-        )
+        )   
     
     @staticmethod
     def reembed_model(model_id: str) -> Tuple[Dict, int]:

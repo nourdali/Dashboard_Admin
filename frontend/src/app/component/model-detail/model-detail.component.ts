@@ -19,6 +19,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   uploadProgress = 0;
   private wsSubscription: Subscription | null = null;
   private embeddingStatusSubscription: Subscription | null = null;
+  cdr: any;
 
   constructor(
     private route: ActivatedRoute,
@@ -184,13 +185,16 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   
     this.error = null;
     this.loadingService.show('Initiating model training...');
-  
+    console.log('Triggering training for model:', this.model.name);
     try {
       const response = await this.apiService.embedDocuments(this.model.name).toPromise();
+
+      console.log('Training response:', response);
+      
   
       if (response) {
-        // Update model status and logs
         this.model.status = 'Training';
+        // Update model status and logs
         this.model.trainingLogs = [
           ...(this.model.trainingLogs || []),
           `Training started at ${new Date().toLocaleString()}`
@@ -212,6 +216,7 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
   
       this.toastService.error(errorMessage);
     } finally {
+      this.model.status = 'Ready'; // Set status to Finished after training
       this.loadingService.hide();
     }
   }
@@ -219,17 +224,20 @@ export class ModelDetailComponent implements OnInit, OnDestroy {
     if (!this.model) return;
 
     if (confirm('Are you sure you want to delete this file?')) {
-      this.loadingService.show('Deleting file...');
+      this.loadingService.show('Deleting file...', 'deleteFile');
+      this.error = null;
       try {
-        await this.apiService.deleteModelFile(this.model.id, filename);
-        await this.loadModel(this.model.id);
+        await this.apiService.deleteModelFile(this.model.id, filename).toPromise();
         this.toastService.success('File deleted successfully');
+        await this.loadModel(this.model.id); // Refresh model details
       } catch (error: any) {
-        const errorMessage = error.error?.message || 'Error deleting file';
+        console.error('Delete File Error:', error);
+        const errorMessage = error.message || 'Error deleting file';
         this.error = errorMessage;
         this.toastService.error(errorMessage);
       } finally {
-        this.loadingService.hide();
+        this.loadingService.hide('deleteFile');
+        this.cdr.detectChanges(); // Force UI update
       }
     }
   }
