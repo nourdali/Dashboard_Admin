@@ -1,0 +1,46 @@
+.document-list-container {
+  padding: 20px;
+  
+  h2 {
+    margin-bottom: 20px;
+  }
+  
+  .controls {
+    margin-bottom: 20px;
+    
+    .filter-group {
+      max-width: 300px;
+      
+      label {
+        display: block;
+        margin-bottom: 5px;
+      }
+    }
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .error-message {
+    color: #dc3545;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #dc3545;
+    border-radius: 4px;
+    background-color: #f8d7da;
+  }
+  
+  .documents-table {
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    
+    .no-documents {
+      text-align: center;
+      padding: 20px;
+      color: #6c757d;
+    }
+  }
+}

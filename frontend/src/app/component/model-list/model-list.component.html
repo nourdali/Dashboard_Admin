@@ -59,7 +59,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let model of filteredModels">
+            <tr *ngFor="let model of models">
               <td>{{model.name}}</td>
               <td>{{model.description}}</td>
               <td>
@@ -91,9 +91,7 @@
                                     [class.bg-warning]="model.vectorStore.status === 'inactive'">
                     {{model.vectorStore.documentCount}} docs
                   </span>
-                  <small class="ms-2 text-muted">
-                    {{model.vectorStore.lastUpdated | date:'short'}}
-                  </small>
+                  <td> {{ model.dateCreated ? (model.dateCreated | date:'short') : 'N/A' }}</td>
                 </span>
                 <span *ngIf="!model.vectorStore" class="text-muted">
                   No vector store
@@ -116,7 +114,7 @@
         </table>
 
         <!-- No Results Message -->
-        <div class="text-center my-4" *ngIf="filteredModels.length === 0">
+        <div class="text-center my-4" *ngIf="models.length === 0">
           <p class="text-muted">No models found</p>
         </div>
       </div>

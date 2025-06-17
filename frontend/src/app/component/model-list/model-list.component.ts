@@ -28,6 +28,7 @@ export class ModelListComponent implements OnInit, OnDestroy {
   Math = Math; // For using Math in template
 
   private wsSubscription: Subscription | null = null;
+  cdr: any;
 
   constructor(
     private apiService: ApiService,
@@ -38,7 +39,7 @@ export class ModelListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadModels();
-    this.setupWebSocket();
+    // this.setupWebSocket();
   }
 
   ngOnDestroy(): void {
@@ -48,90 +49,65 @@ export class ModelListComponent implements OnInit, OnDestroy {
     this.wsService.disconnect();
   }
 
-  private setupWebSocket(): void {
-    this.wsSubscription = this.wsService.connect()
-      .subscribe({
-        next: (update: ModelUpdate) => {
-          // Update model status in both models and filteredModels arrays
-          const updateModel = (modelArray: AIModel[]) => {
-            const index = modelArray.findIndex(m => m.id === update.modelId);
-            if (index !== -1) {
-              const previousStatus = modelArray[index].status;
-              modelArray[index] = {
-                ...modelArray[index],
-                status: update.status,
-                trainingLogs: update.trainingLogs || modelArray[index].trainingLogs
-              };
+  // private setupWebSocket(): void {
+  //   this.wsSubscription = this.wsService.connect()
+  //     .subscribe({
+  //       next: (update: ModelUpdate) => {
+  //         // Update model status in both models and filteredModels arrays
+  //         const updateModel = (modelArray: AIModel[]) => {
+  //           const index = modelArray.findIndex(m => m.id === update.modelId);
+  //           if (index !== -1) {
+  //             const previousStatus = modelArray[index].status;
+  //             modelArray[index] = {
+  //               ...modelArray[index],
+  //               status: update.status,
+  //               trainingLogs: update.trainingLogs || modelArray[index].trainingLogs
+  //             };
               
-              // Show notifications for significant status changes
-              if (previousStatus !== update.status) {
-                switch (update.status) {
-                  case 'Ready':
-                    this.toastService.success(`Model "${modelArray[index].name}" training completed`);
-                    break;
-                  case 'Error':
-                    this.toastService.error(`Model "${modelArray[index].name}" training failed`);
-                    break;
-                }
-              }
-            }
-          };
+  //             // Show notifications for significant status changes
+  //             if (previousStatus !== update.status) {
+  //               switch (update.status) {
+  //                 case 'Ready':
+  //                   this.toastService.success(`Model "${modelArray[index].name}" training completed`);
+  //                   break;
+  //                 case 'Error':
+  //                   this.toastService.error(`Model "${modelArray[index].name}" training failed`);
+  //                   break;
+  //               }
+  //             }
+  //           }
+  //         };
 
-          updateModel(this.models);
-          updateModel(this.filteredModels);
-        },
-        error: (error) => {
-          console.error('WebSocket error:', error);
-          this.toastService.error('Lost connection to server');
-        }
-      });
-  }
+  //         updateModel(this.models);
+  //         updateModel(this.filteredModels);
+  //       },
+  //       error: (error) => {
+  //         console.error('WebSocket error:', error);
+  //         this.toastService.error('Lost connection to server');
+  //       }
+  //     });
+  // }
 
   async loadModels(): Promise<void> {
     this.error = null;
     this.loadingService.show('Loading models...');
 
-    try {
-      const result = await this.apiService.getModels(this.currentPage, this.pageSize).subscribe({
-          next: (updatedModels) => {
-            console.log('Updated models:', updatedModels);
-            
-          },
-          error: (error) => {
-            console.error('Error loading model details:', error);
-          }
-        });
-      if (result) {
-        // Get embedding status and vector store info for each model
-/*         const modelUpdates = result.models.map(model => 
-          forkJoin([
-            this.apiService.getEmbeddingStatus(model.id),
-            this.apiService.getVectorStore(model.id)
-          ]).pipe(
-            map(([embeddingStatus, vectorStore]) => ({
-              ...model,
-              embeddingStatus: embeddingStatus.status,
-              embeddingProgress: embeddingStatus.progress,
-              vectorStore
-            }))
-          )
-        ); */
-        const modelUpdates = result.models
-          .filter(model => model.embeddingStatus !== 'Completed')
-          .map(model => {
-            return this.apiService.getModel(model.id)
-          });
+    try {      const result = await this.apiService.getModels(this.currentPage, this.pageSize).toPromise();
+      if (result?.models) {
+        // Set all models as the update list, since we don't need to filter by embedding status
+        const modelUpdates = result.models.map(model => ({
+          ...model,
+          embeddingStatus: model.embeddingStatus || 'Pending'  // Provide default status if it doesn't exist
+        }));
+        console.log('Models loaded:', modelUpdates);
 
-        /* forkJoin(modelUpdates).subscribe({
-          next: (updatedModels) => {
-            this.models = updatedModels;
+       
+            this.models = modelUpdates;
             this.totalModels = result.total;
             this.applyFilters();
-          },
-          error: (error) => {
-            console.error('Error loading model details:', error);
-          }
-        }); */
+       
+         
+      
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error loading models';
@@ -180,21 +156,26 @@ export class ModelListComponent implements OnInit, OnDestroy {
   }
 
   async deleteModel(modelId: string): Promise<void> {
-    if (!confirm('Are you sure you want to delete this model?')) return;
+      if (!confirm('Are you sure you want to delete this model?')) return;
 
-    this.loadingService.show('Deleting model...');
-    try {
-      await this.apiService.deleteModel(modelId);
-      this.toastService.success('Model deleted successfully');
-      await this.loadModels();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Error deleting model';
-      this.error = errorMessage;
-      this.toastService.error(errorMessage);
-    } finally {
-      this.loadingService.hide();
+      this.loadingService.show('Deleting model...', 'deleteModel');
+      this.error = null;
+      try {
+        await this.apiService.deleteModel(modelId).toPromise();
+        this.toastService.success('Model deleted successfully');
+        await this.loadModels(); // Refresh model list
+        // Optionally redirect if in model detail view
+        // this.router.navigate(['/models']);
+      } catch (error: any) {
+        console.error('Delete Model Error:', error);
+        this.error = error.message || 'Error deleting model';
+        this.toastService.error(this.error || 'Error deleting model');
+      } finally {
+        this.loadingService.hide('deleteModel');
+        this.cdr.detectChanges();
+      }
     }
-  }
+
 
   getStatusClass(status: ModelStatus): string {
     const classes = {

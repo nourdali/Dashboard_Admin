@@ -1,12 +1,7 @@
 <div class="upload-container">
     <h2>Upload de documents</h2>
     
-    <div class="form-group">
-      <label for="category">Catégorie:</label>
-      <select id="category" [(ngModel)]="selectedCategory">
-        <option *ngFor="let cat of categories" [value]="cat">{{cat}}</option>
-      </select>
-    </div>
+
     
     <div class="file-upload">
       <input type="file" id="fileInput" (change)="onFileSelected($event)" accept=".pdf">

@@ -5,4 +5,4 @@ chromadb
 python-dotenv
 requests
 flask-socketio
-
+eventlet

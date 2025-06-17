@@ -1,0 +1,1 @@
+ng generate enum enums/my-enum --flat --type=enum

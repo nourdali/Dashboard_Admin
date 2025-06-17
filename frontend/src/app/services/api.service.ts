@@ -17,58 +17,14 @@ export class ApiService {
     console.error('An error occurred:', error);
     return throwError(() => error);
   }
-
-  // Document Upload
-  uploadFile(file: File, category: string): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('category', category);
-    return this.http.post(`${this.apiUrl}/upload`, formData).pipe(
+  
+  getModelFile(modelId: string, filename: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/models/${modelId}/files/${filename}`, { responseType: 'blob' }).pipe(
       catchError(this.handleError)
     );
   }
-
-  // Get Documents
-  getDocuments(category?: string): Observable<any> {
-    const url = category ? `${this.apiUrl}/documents?category=${category}` : `${this.apiUrl}/documents`;
-    return this.http.get(url).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // Delete Document
-  deleteDocument(docId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/documents/${docId}`).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // Query Documents
-  queryDocuments(query: string, category?: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/query`, { query, category }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  // Vector Store Operations
-  initVectorStore(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/init-vector-store`, {}).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  getVectorStore(modelId: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/get-vector-store/${modelId}`).pipe(
-      catchError(this.handleError)
-    );
-  }
-
   // Embedding Operations
-  embedDocuments(modelName: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/models/${modelName}/embed`, {}).pipe(
-      catchError(this.handleError)
-    );
-  }
+
 
   reembedModel(modelId: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/models/${modelId}/reembed`, {}).pipe(
@@ -98,27 +54,37 @@ export class ApiService {
   }
 
   createModel(name: string, description: string): Observable<AIModel> {
-    return this.http.post<AIModel>(`${this.apiUrl}/models`, { name, description }).pipe(
-      catchError(this.handleError)
-    );
+      console.log('Sending payload:', { name, description });
+      return this.http.post<AIModel>(`${this.apiUrl}/models`, { name, description }).pipe(
+          catchError(this.handleError)
+      );
   }
 
   deleteModel(modelId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/models/${modelId}`).pipe(
-      catchError(this.handleError)
-    );
+      const url = `${this.apiUrl}/models/${modelId}`;
+      console.log('DELETE Model URL:', url); // Debug log
+      return this.http.delete<{ message: string, model_id: string }>(url).pipe(
+        map(response => {
+          console.log('DELETE Model Response:', response); // Debug log
+          if (response.message === 'Model deleted successfully') {
+            return; // Return void for successful deletion
+          }
+          throw new Error(response.message || 'Unexpected response');
+        }),
+        catchError(this.handleError)
+      );
   }
 
-  uploadModelFiles(modelId: string, files: File[]): Observable<any> {
-    const formData = new FormData();
-    formData.append('model_name', modelId);
-    
-    files.forEach(file => {
-      formData.append('files[]', file);
-    });
-    return this.http.post(`${this.apiUrl}/models/${modelId}/files`, formData).pipe(
-      catchError(this.handleError)
-    );
+  uploadModelFiles(modelName: string, files: File[]): Observable<any> {
+      const formData = new FormData();
+      formData.append('model_name', modelName); // Utiliser modelName
+      files.forEach(file => {
+          console.log('Adding file to FormData:', file.name);
+          formData.append('files[]', file);
+      });
+      return this.http.post(`${this.apiUrl}/models/upload-model`, formData).pipe(
+          catchError(this.handleError)
+      );
   }
 
   updateModelFiles(modelId: string, files: File[]): Observable<any> {
@@ -133,21 +99,28 @@ export class ApiService {
   }
 
   deleteModelFile(modelId: string, filename: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/models/${modelId}/files/${filename}`).pipe(
-      catchError(this.handleError)
-    );
-  }
+      // Encode filename to handle special characters
+      const encodedFilename = encodeURIComponent(filename);
+      return this.http.delete<{ message: string, model_id: string, filename: string }>(
+        `${this.apiUrl}/models/${modelId}/files/${encodedFilename}`
+      ).pipe(
+        map(response => {
+          if (response.message === 'File deleted successfully') {
+            return; // Return void for successful deletion
+          }
+          throw new Error(response.message || 'Unexpected response');
+        }),
+        catchError(this.handleError)
+      );
+    }
 
-  getModelFile(modelId: string, filename: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/models/${modelId}/files/${filename}`, { responseType: 'blob' }).pipe(
-      catchError(this.handleError)
-    );
-  }
 
-  trainModel(modelId: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/models/${modelId}/train`, {}).pipe(
-      catchError(this.handleError)
-    );
+
+  embedDocuments(model_name: string): Observable<any> {
+      console.log('Embedding documents for model:', model_name);
+      return this.http.post(`${this.apiUrl}/models/${model_name}/embed`, {}).pipe(
+          catchError(this.handleError)
+      );
   }
 
   // Chat Operations

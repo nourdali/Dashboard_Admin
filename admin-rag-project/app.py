@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -5,9 +6,11 @@ import logging
 from config import Config
 from services.external_service import ChatService, EmbeddingService, FileService, ModelService
 
+
+
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Load configuration
@@ -51,8 +54,7 @@ from flask import request, jsonify
 @app.route('/api/models/upload-model', methods=['POST'])
 def upload_files():
     try:
-        # Access model_id from the form data
-        model_name = request.form.get('model_name')
+        model_name = request.form.get('model_name')  # C'est maintenant le nom du modèle (par exemple, "hello")
         if not model_name:
             return jsonify({"error": "Missing model_name"}), 400
 
@@ -66,6 +68,7 @@ def upload_files():
 
 
         files = request.files.getlist('files[]')
+        logger.info(f"Received {len(files)} files: {[f.filename for f in files]}")
         valid_files = [f for f in files if f.filename and allowed_file(f.filename)]
 
 
@@ -151,7 +154,7 @@ def delete_model_file(model_id, filename):
 @app.route('/api/models/<model_name>/embed', methods=['POST'])
 def embed_documents(model_name):
     try:
-        response, status_code =EmbeddingService.embed_documents(model_name)
+        response, status_code = EmbeddingService.embed_documents(model_name)
         return jsonify(response), status_code
     except Exception as e:
         logger.error(f"Error embedding model: {str(e)}", exc_info=True)
